@@ -13,6 +13,7 @@
       <h3>Instructions</h3>
       <ol>
         <li>Click <strong>Upload</strong> to choose an Excel or CSV file.</li>
+        <li>After uploading, preview the data.</li>
         <li>Click <strong>My Fixed Data Range / Columns</strong> to specify columns that should remain unchanged.</li>
         <li>Click <strong>Triplet Data Range</strong> to specify columns for Brand, Subcategory, and SKU data.</li>
         <li>Click <strong>Process</strong> to normalize the data.</li>
@@ -23,7 +24,7 @@
     <!-- Fixed Data Range Panel -->
     <div id="fixedDataRange" style="display:none;">
       <h3>My Fixed Data Range / Columns</h3>
-      <p>Select the columns that should remain fixed in your data:</p>
+      <p>After previewing, enter the fixed data columns:</p>
       <input type="text" id="fixedColumns" placeholder="Enter fixed columns (e.g., A, B, C)" />
       <button onclick="applyFixedColumns()">Apply</button>
     </div>
@@ -31,21 +32,24 @@
     <!-- Triplet Data Range Panel -->
     <div id="tripletDataRange" style="display:none;">
       <h3>Triplet Data Range</h3>
-      <p>Select the columns that contain Brand, Sub Category, and SKU:</p>
+      <p>After previewing, enter columns containing Brand, Sub Category, and SKU:</p>
       <input type="text" id="tripletColumns" placeholder="Enter triplet columns (e.g., D:F, G:I)" />
       <button onclick="applyTripletColumns()">Apply</button>
     </div>
 
     <input type="file" id="upload" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" />
-    <button id="processBtn" disabled>Process</button>
-    <button id="downloadBtn" disabled>Download Excel</button>
+    <button id="processBtn" disabled onclick="processData()">Process</button>
+    <button id="downloadBtn" disabled onclick="downloadExcel()">Download Excel</button>
     <p id="status"></p>
     <table id="preview"></table>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="script.js"></script>
   <script>
+    let data; // Store uploaded data
+    let fixedColumns = [];
+    let tripletColumns = [];
+
     // Toggle Instructions Panel
     function toggleInstructions() {
       const instr = document.getElementById("instructions");
@@ -64,18 +68,73 @@
       tripletRange.style.display = tripletRange.style.display === "none" ? "block" : "none";
     }
 
-    // Apply Fixed Data Range (capturing user input)
-    function applyFixedColumns() {
-      const fixedCols = document.getElementById("fixedColumns").value;
-      console.log("Fixed columns applied: " + fixedCols);
-      // You can add logic here to store and apply these ranges to the data
+    // Handle file upload
+    document.getElementById("upload").addEventListener("change", handleFileUpload);
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        const fileData = e.target.result;
+        const wb = XLSX.read(fileData, {type: 'binary'});
+
+        // Assuming first sheet is the relevant one
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(ws, {header: 1});
+        
+        // Preview the data
+        previewData();
+        document.getElementById("processBtn").disabled = false;
+      };
+      
+      reader.readAsBinaryString(file);
     }
 
-    // Apply Triplet Data Range (capturing user input)
+    // Preview data in a table
+    function previewData() {
+      const table = document.getElementById("preview");
+      table.innerHTML = ""; // Clear previous preview
+      
+      data.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        row.forEach(cell => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+    }
+
+    // Apply Fixed Data Range
+    function applyFixedColumns() {
+      const input = document.getElementById("fixedColumns").value;
+      fixedColumns = input.split(',').map(col => col.trim());
+      console.log("Fixed columns applied:", fixedColumns);
+    }
+
+    // Apply Triplet Data Range
     function applyTripletColumns() {
-      const tripletCols = document.getElementById("tripletColumns").value;
-      console.log("Triplet columns applied: " + tripletCols);
-      // You can add logic here to store and apply these ranges to the data
+      const input = document.getElementById("tripletColumns").value;
+      tripletColumns = input.split(',').map(col => col.trim());
+      console.log("Triplet columns applied:", tripletColumns);
+    }
+
+    // Process Data (dummy function for now)
+    function processData() {
+      console.log("Processing data with fixed columns:", fixedColumns);
+      console.log("Processing data with triplet columns:", tripletColumns);
+      
+      // Here you would process the data as needed
+    }
+
+    // Download the processed data as Excel
+    function downloadExcel() {
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Processed Data");
+      XLSX.writeFile(wb, "processed_data.xlsx");
     }
   </script>
 </body>
