@@ -192,10 +192,10 @@
       const processedData = [];
       const headers = [
         ...data[0].slice(fixedColumns.start, fixedColumns.end + 1),
-        'Triplet_First',
+        'Brand',
         'Category',
-        'Triplet_Second',
-        'Triplet_Third'
+        'Sub Category',
+        'SKU'
       ];
       processedData.push(headers);
 
@@ -227,10 +227,10 @@
 
           const newRow = [
             ...fixedData,
-            triplet[0],
-            category,
-            triplet[1],
-            triplet[2]
+            triplet[0], // Brand
+            category,   // Category
+            triplet[1], // Sub Category
+            triplet[2]  // SKU
           ].map(cell => cell || '');
 
           processedData.push(newRow);
