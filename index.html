@@ -3,335 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CSV Data Processor</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.9/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <title>Spreadsheet Processor</title>
+  <style>
+    .container {
+      width: 80%;
+      margin: auto;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+    input {
+      margin: 5px;
+      padding: 8px;
+      width: 200px;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 16px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    #status {
+      color: red;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const App = () => {
-      const [csvFile, setCsvFile] = React.useState(null);
-      const [fixedRange, setFixedRange] = React.useState('1:9');
-      const [tripletRange, setTripletRange] = React.useState('10:n');
-      const [processedData, setProcessedData] = React.useState(null);
-      const [error, setError] = React.useState('');
+  <div class="container">
+    <h1>Spreadsheet Processor</h1>
+    
+    <!-- Upload Button -->
+    <div>
+      <label for="upload">1. Upload CSV or Excel File:</label><br>
+      <input type="file" id="upload" accept=".csv, .xlsx, .xls" />
+    </div>
+    
+    <!-- Preview Table -->
+    <h3>Data Preview</h3>
+    <table id="preview"></table>
 
-      const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file && file.type === 'text/csv') {
-          setCsvFile(file);
-          setProcessedData(null);
-          setError('');
-        } else {
-          setError('Please upload a valid CSV file.');
-        }
+    <!-- Range Selection -->
+    <div>
+      <label for="fixedColumns">2. Fixed Data Range (e.g., 1:9):</label><br>
+      <input type="text" id="fixedColumns" placeholder="Enter fixed column range" disabled />
+    </div>
+    <div>
+      <label for="tripletColumns">3. Triplet Data Range (e.g., 10:n):</label><br>
+      <input type="text" id="tripletColumns" placeholder="Enter triplet column range" disabled />
+    </div>
+    
+    <!-- Buttons -->
+    <button id="processBtn" disabled onclick="processData()">4. Process</button>
+    <button id="downloadBtn" disabled onclick="downloadExcel()">5. Download Excel</button>
+
+    <!-- Status Message -->
+    <p id="status"></p>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    let data = null; // Store uploaded data
+    let fixedColumns = null;
+    let tripletColumns = null;
+
+    // Elements
+    const uploadInput = document.getElementById("upload");
+    const fixedColumnsInput = document.getElementById("fixedColumns");
+    const tripletColumnsInput = document.getElementById("tripletColumns");
+    const processBtn = document.getElementById("processBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const status = document.getElementById("status");
+
+    // Handle file upload
+    uploadInput.addEventListener("change", handleFileUpload);
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file || !["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"].includes(file.type)) {
+        status.textContent = "Please upload a valid CSV or Excel file.";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const fileData = e.target.result;
+        const wb = XLSX.read(fileData, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(ws, { header: 1 }).filter(row => row.some(cell => cell));
+
+        // Enable fixed columns input and preview data
+        fixedColumnsInput.disabled = false;
+        fixedColumnsInput.value = "1:9"; // Default value
+        tripletColumnsInput.value = "10:n"; // Default value
+        previewData();
+        status.textContent = "";
       };
+      reader.readAsBinaryString(file);
+    }
 
-      const processData = () => {
-        if (!csvFile) {
-          setError('Please upload a CSV file first.');
-          return;
-        }
+    // Preview data in a table
+    function previewData() {
+      const table = document.getElementById("preview");
+      table.innerHTML = ""; // Clear previous preview
 
-        // Validate ranges
-        const fixedMatch = fixedRange.match(/^(\d+):(\d+)$/);
-        const tripletMatch = tripletRange.match(/^(\d+):(\d+|n)$/);
-        if (!fixedMatch || !tripletMatch) {
-          setError('Invalid range format. Use e.g., "1:9" for fixed and "10:n" for triplet.');
-          return;
-        }
+      if (!data || data.length === 0) return;
 
-        const fixedStart = parseInt(fixedMatch[1]);
-        const fixedEnd = parseInt(fixedMatch[2]);
-        const tripletStart = parseInt(tripletMatch[1]);
-        const tripletEnd = tripletMatch[2] === 'n' ? Infinity : parseInt(tripletMatch[2]);
+      // Create header row with column numbers
+      const headerRow = document.createElement("tr");
+      for (let i = 0; i < data[0].length; i++) {
+        const th = document.createElement("th");
+        th.textContent = `Column ${i + 1}`;
+        headerRow.appendChild(th);
+      }
+      table.appendChild(headerRow);
 
-        if (fixedStart < 1 || fixedEnd < fixedStart || tripletStart <= fixedEnd) {
-          setError('Invalid range values. Ensure fixed range precedes triplet range.');
-          return;
-        }
-
-        Papa.parse(csvFile, {
-          complete: (result) => {
-            const data = result.data;
-            const headers = data[0];
-            const rows = data.slice(1).filter(row => row.some(cell => cell));
-
-            const processedRows = [];
-            rows.forEach(row => {
-              const fixedColumns = row.slice(fixedStart - 1, fixedEnd);
-
-              // Process triplets (every three columns starting from tripletStart)
-              for (let i = tripletStart - 1; i < Math.min(row.length, tripletEnd); i += 3) {
-                if (i + 2 >= row.length) break;
-
-                const triplet = [row[i] || '', row[i + 1] || '', row[i + 2] || ''];
-                const item = triplet[1].toLowerCase();
-
-                let category = '';
-                if (/atta|maida|semolina/i.test(item)) {
-                  category = 'Flour';
-                } else if (item.includes('lentil')) {
-                  category = 'Lentil';
-                } else if (item.includes('mustard oil')) {
-                  category = 'Mustard Oil';
-                } else if (item.includes('puffed rice')) {
-                  category = 'Puffed Rice';
-                } else if (/rice chinigura|rice others/i.test(item)) {
-                  category = 'Rice';
-                } else if (item.includes('salt')) {
-                  category = 'Salt';
-                }
-
-                const newRow = [
-                  ...fixedColumns,
-                  triplet[0], // Triplet first
-                  category,   // Derived category
-                  triplet[1], // Triplet second
-                  triplet[2]  // Triplet third
-                ].map(cell => cell || '');
-
-                processedRows.push(newRow);
-              }
-            });
-
-            const newHeaders = [
-              ...headers.slice(fixedStart - 1, fixedEnd),
-              'Triplet_First',
-              'Category',
-              'Triplet_Second',
-              'Triplet_Third'
-            ];
-
-            setProcessedData({ headers: newHeaders, rows: processedRows });
-            setError('');
-          },
-          header: false tubes, and the result is downloaded as an Excel file.
-
-The application is designed to be hosted on GitHub Pages, using CDN-hosted libraries for React, Tailwind CSS, PapaParse (for CSV parsing), and XLSX (for Excel generation). The artifact retains the same `artifact_id` as the previous version since this is an update to the existing application.
-
-<xaiArtifact artifact_id="d888903d-a575-4c58-bec7-53e10074dec7" artifact_version_id="1e0fa0fc-4724-4c8e-bb95-847c2a6176d0" title="index.html" contentType="text/html">
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CSV Data Processor</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.9/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const App = () => {
-      const [csvFile, setCsvFile] = React.useState(null);
-      const [fixedRange, setFixedRange] = React.useState('');
-      const [tripletRange, setTripletRange] = React.useState('');
-      const [processedData, setProcessedData] = React.useState(null);
-      const [error, setError] = React.useState('');
-
-      const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file && file.type === 'text/csv') {
-          setCsvFile(file);
-          setFixedRange('1:9'); // Set default after file upload
-          setTripletRange('10:n'); // Set default after file upload
-          setProcessedData(null);
-          setError('');
-        } else {
-          setError('Please upload a valid CSV file.');
-        }
-      };
-
-      const processData = () => {
-        if (!csvFile) {
-          setError('Please upload a CSV file first.');
-          return;
-        }
-
-        // Validate ranges
-        const fixedMatch = fixedRange.match(/^(\d+):(\d+)$/);
-        const tripletMatch = tripletRange.match(/^(\d+):(\d+|n)$/);
-        if (!fixedMatch || !tripletMatch) {
-          setError('Invalid range format. Use e.g., "1:9" for fixed and "10:n" for triplet.');
-          return;
-        }
-
-        const fixedStart = parseInt(fixedMatch[1]);
-        const fixedEnd = parseInt(fixedMatch[2]);
-        const tripletStart = parseInt(tripletMatch[1]);
-        const tripletEnd = tripletMatch[2] === 'n' ? Infinity : parseInt(tripletMatch[2]);
-
-        if (fixedStart < 1 || fixedEnd < fixedStart || tripletStart <= fixedEnd) {
-          setError('Invalid range values. Ensure fixed range precedes triplet range.');
-          return;
-        }
-
-        Papa.parse(csvFile, {
-          complete: (result) => {
-            const data = result.data;
-            const headers = data[0];
-            const rows = data.slice(1).filter(row => row.some(cell => cell));
-
-            const processedRows = [];
-            rows.forEach(row => {
-              const fixedColumns = row.slice(fixedStart - 1, fixedEnd);
-
-              // Process triplets (every three columns starting from tripletStart)
-              for (let i = tripletStart - 1; i < Math.min(row.length, tripletEnd); i += 3) {
-                if (i + 2 >= row.length) break;
-
-                const triplet = [row[i] || '', row[i + 1] || '', row[i + 2] || ''];
-                const item = triplet[1].toLowerCase();
-
-                let category = '';
-                if (/atta|maida|semolina/i.test(item)) {
-                  category = 'Flour';
-                } else if (item.includes('lentil')) {
-                  category = 'Lentil';
-                } else if (item.includes('mustard oil')) {
-                  category = 'Mustard Oil';
-                } else if (item.includes('puffed rice')) {
-                  category = 'Puffed Rice';
-                } else if (/rice chinigura|rice others/i.test(item)) {
-                  category = 'Rice';
-                } else if (item.includes('salt')) {
-                  category = 'Salt';
-                }
-
-                const newRow = [
-                  ...fixedColumns,
-                  triplet[0], // Triplet first
-                  category,   // Derived category
-                  triplet[1], // Triplet second
-                  triplet[2]  // Triplet third
-                ].map(cell => cell || '');
-
-                processedRows.push(newRow);
-              }
-            });
-
-            const newHeaders = [
-              ...headers.slice(fixedStart - 1, fixedEnd),
-              'Triplet_First',
-              'Category',
-              'Triplet_Second',
-              'Triplet_Third'
-            ];
-
-            setProcessedData({ headers: newHeaders, rows: processedRows });
-            setError('');
-          },
-          header: false,
-          skipEmptyLines: true
+      // Create table rows (limit to first few rows for preview)
+      data.slice(0, Math.min(5, data.length)).forEach(row => {
+        const tr = document.createElement("tr");
+        row.forEach(cell => {
+          const td = document.createElement("td");
+          td.textContent = cell || "";
+          tr.appendChild(td);
         });
-      };
+        table.appendChild(tr);
+      });
+    }
 
-      const handleDownload = () => {
-        if (!processedData) {
-          setError('No processed data available. Please process the data first.');
-          return;
+    // Parse range input like "1:9" or "10:n" to column indices
+    function parseRange(range) {
+      const parts = range.split(':');
+      if (parts.length !== 2) return null;
+      const start = parseInt(parts[0].trim()) - 1; // Convert to 0-index
+      const end = parts[1].trim() === 'n' ? data[0].length : parseInt(parts[1].trim()) - 1;
+      return { start, end };
+    }
+
+    // Apply Fixed Data Range
+    fixedColumnsInput.addEventListener("input", function() {
+      const range = fixedColumnsInput.value;
+      fixedColumns = parseRange(range);
+      if (fixedColumns && fixedColumns.start >= 0 && fixedColumns.end >= fixedColumns.start) {
+        tripletColumnsInput.disabled = false;
+        status.textContent = "";
+      } else {
+        tripletColumnsInput.disabled = true;
+        processBtn.disabled = true;
+        status.textContent = "Invalid fixed range format. Use e.g., '1:9'.";
+      }
+    });
+
+    // Apply Triplet Data Range
+    tripletColumnsInput.addEventListener("input", function() {
+      const range = tripletColumnsInput.value;
+      tripletColumns = parseRange(range);
+      if (tripletColumns && tripletColumns.start >= fixedColumns.end && tripletColumns.end >= tripletColumns.start) {
+        processBtn.disabled = false;
+        status.textContent = "";
+      } else {
+        processBtn.disabled = true;
+        status.textContent = "Invalid triplet range format. Use e.g., '10:n' and ensure it starts after fixed range.";
+      }
+    });
+
+    // Process Data (mimicking the ARRAYFORMULA logic)
+    function processData() {
+      if (!data || !fixedColumns || !tripletColumns) {
+        status.textContent = "Please complete all steps before processing.";
+        return;
+      }
+
+      const processedData = [];
+      const headers = [
+        ...data[0].slice(fixedColumns.start, fixedColumns.end + 1),
+        'Triplet_First',
+        'Category',
+        'Triplet_Second',
+        'Triplet_Third'
+      ];
+      processedData.push(headers);
+
+      // Process each row
+      data.slice(1).forEach(row => {
+        const fixedData = row.slice(fixedColumns.start, fixedColumns.end + 1);
+
+        // Process triplets
+        for (let i = tripletColumns.start; i < Math.min(row.length, tripletColumns.end + 1); i += 3) {
+          if (i + 2 >= row.length) break;
+
+          const triplet = [row[i] || '', row[i + 1] || '', row[i + 2] || ''];
+          const item = triplet[1].toLowerCase();
+
+          let category = '';
+          if (/atta|maida|semolina/i.test(item)) {
+            category = 'Flour';
+          } else if (item.includes('lentil')) {
+            category = 'Lentil';
+          } else if (item.includes('mustard oil')) {
+            category = 'Mustard Oil';
+          } else if (item.includes('puffed rice')) {
+            category = 'Puffed Rice';
+          } else if (/rice chinigura|rice others/i.test(item)) {
+            category = 'Rice';
+          } else if (item.includes('salt')) {
+            category = 'Salt';
+          }
+
+          const newRow = [
+            ...fixedData,
+            triplet[0],
+            category,
+            triplet[1],
+            triplet[2]
+          ].map(cell => cell || '');
+
+          processedData.push(newRow);
         }
+      });
 
-        const ws = XLSX.utils.json_to_sheet(
-          processedData.rows.map(row => 
-            processedData.headers.reduce((obj, header, index) => ({
-              ...obj,
-              [header]: row[index]
-            }), {})
-          ),
-          { header: processedData.headers }
-        );
+      data = processedData;
+      downloadBtn.disabled = false;
+      status.textContent = "Data processed successfully.";
+    }
 
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Processed Data');
-        XLSX.writeFile(wb, 'processed_data.xlsx');
-      };
+    // Download the processed data as Excel
+    function downloadExcel() {
+      if (!data) {
+        status.textContent = "No processed data available.";
+        return;
+      }
 
-      return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-            <h1 className="text-2xl font-bold mb-6 text-center">CSV Data Processor</h1>
-            
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {error}
-              </div>
-            )}
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">1. Upload CSV</label>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">2. Fixed Range (e.g., 1:9)</label>
-              <input
-                type="text"
-                value={fixedRange}
-                onChange={(e) => setFixedRange(e.target.value)}
-                disabled={!csvFile}
-                className={`w-full border rounded px-3 py-2 ${!csvFile ? 'bg-gray-200 cursor-not-allowed' : ''}`}
-                placeholder="1:9"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">3. Triplet Range (e.g., 10:n)</label>
-              <input
-                type="text"
-                value={tripletRange}
-                onChange={(e) => setTripletRange(e.target.value)}
-                disabled={!csvFile || !fixedRange}
-                className={`w-full border rounded px-3 py-2 ${!csvFile || !fixedRange ? 'bg-gray-200 cursor-not-allowed' : ''}`}
-                placeholder="10:n"
-              />
-            </div>
-
-            <div className="mb-6">
-              <button
-                onClick={processData}
-                disabled={!csvFile || !fixedRange || !tripletRange}
-                className={`w-full py-2 px-4 rounded text-white ${
-                  !csvFile || !fixedRange || !tripletRange
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-green-500 hover:bg-green-600'
-                }`}
-              >
-                4. Process
-              </button>
-            </div>
-
-            {processedData && (
-              <div>
-                <button
-                  onClick={handleDownload}
-                  className="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600"
-                >
-                  5. Download Excel
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    };
-
-    ReactDOM.render(<App />, document.getElementById('root'));
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Processed Data");
+      XLSX.writeFile(wb, "processed_data.xlsx");
+    }
   </script>
 </body>
 </html>
