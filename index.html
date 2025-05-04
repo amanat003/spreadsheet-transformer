@@ -13,35 +13,39 @@
       <h3>Instructions</h3>
       <ol>
         <li>Click <strong>Upload</strong> to choose an Excel or CSV file.</li>
-        <li>After uploading, preview the data.</li>
+        <li>After uploading, preview the data in the table below.</li>
         <li>Click <strong>My Fixed Data Range / Columns</strong> to specify columns that should remain unchanged.</li>
-        <li>Click <strong>Triplet Data Range</strong> to specify columns for Brand, Subcategory, and SKU data.</li>
-        <li>Click <strong>Process</strong> to normalize the data.</li>
-        <li>Click <strong>Download Excel</strong> to export the result.</li>
+        <li>Click <strong>Triplet Data Range</strong> to specify columns containing Brand, Sub Category, and SKU.</li>
+        <li>Click <strong>Process</strong> to process the data according to your specifications.</li>
+        <li>Click <strong>Download Excel</strong> to export the result as an Excel file.</li>
       </ol>
     </div>
+
+    <!-- File Upload -->
+    <input type="file" id="upload" accept=".csv, .xlsx, .xls" />
+    <button id="processBtn" disabled onclick="processData()">Process</button>
+    <button id="downloadBtn" disabled onclick="downloadExcel()">Download Excel</button>
+    <p id="status"></p>
+
+    <!-- Data Preview Table -->
+    <h3>Data Preview</h3>
+    <table id="preview"></table>
 
     <!-- Fixed Data Range Panel -->
     <div id="fixedDataRange" style="display:none;">
       <h3>My Fixed Data Range / Columns</h3>
-      <p>After previewing, enter the fixed data columns:</p>
-      <input type="text" id="fixedColumns" placeholder="Enter fixed columns (e.g., A, B, C)" />
+      <p>After previewing, enter the columns that should remain fixed (e.g., A, B, C):</p>
+      <input type="text" id="fixedColumns" placeholder="Enter fixed columns" />
       <button onclick="applyFixedColumns()">Apply</button>
     </div>
 
     <!-- Triplet Data Range Panel -->
     <div id="tripletDataRange" style="display:none;">
       <h3>Triplet Data Range</h3>
-      <p>After previewing, enter columns containing Brand, Sub Category, and SKU:</p>
-      <input type="text" id="tripletColumns" placeholder="Enter triplet columns (e.g., D:F, G:I)" />
+      <p>After previewing, enter the columns that contain Brand, Sub Category, and SKU (e.g., D:F, G:I):</p>
+      <input type="text" id="tripletColumns" placeholder="Enter triplet columns" />
       <button onclick="applyTripletColumns()">Apply</button>
     </div>
-
-    <input type="file" id="upload" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" />
-    <button id="processBtn" disabled onclick="processData()">Process</button>
-    <button id="downloadBtn" disabled onclick="downloadExcel()">Download Excel</button>
-    <p id="status"></p>
-    <table id="preview"></table>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -79,7 +83,7 @@
         const fileData = e.target.result;
         const wb = XLSX.read(fileData, {type: 'binary'});
 
-        // Assuming first sheet is the relevant one
+        // Assuming the first sheet is the relevant one
         const ws = wb.Sheets[wb.SheetNames[0]];
         data = XLSX.utils.sheet_to_json(ws, {header: 1});
         
@@ -107,14 +111,14 @@
       });
     }
 
-    // Apply Fixed Data Range
+    // Apply Fixed Data Range (capturing user input)
     function applyFixedColumns() {
       const input = document.getElementById("fixedColumns").value;
       fixedColumns = input.split(',').map(col => col.trim());
       console.log("Fixed columns applied:", fixedColumns);
     }
 
-    // Apply Triplet Data Range
+    // Apply Triplet Data Range (capturing user input)
     function applyTripletColumns() {
       const input = document.getElementById("tripletColumns").value;
       tripletColumns = input.split(',').map(col => col.trim());
@@ -126,7 +130,11 @@
       console.log("Processing data with fixed columns:", fixedColumns);
       console.log("Processing data with triplet columns:", tripletColumns);
       
-      // Here you would process the data as needed
+      // You can implement logic here to process the data based on fixed and triplet columns.
+      // For example, fixing columns, transforming triplet data, etc.
+
+      // Enable the download button after processing
+      document.getElementById("downloadBtn").disabled = false;
     }
 
     // Download the processed data as Excel
