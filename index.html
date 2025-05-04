@@ -93,7 +93,16 @@
       const table = document.getElementById("preview");
       table.innerHTML = ""; // Clear previous preview
 
-      // Create table rows and cells
+      // Create header row with column numbers
+      const headerRow = document.createElement("tr");
+      for (let i = 0; i < data[0].length; i++) {
+        const th = document.createElement("th");
+        th.textContent = `Column ${i + 1}`; // Show column number
+        headerRow.appendChild(th);
+      }
+      table.appendChild(headerRow);
+
+      // Create table rows and cells for data
       data.forEach(row => {
         const tr = document.createElement("tr");
         row.forEach(cell => {
