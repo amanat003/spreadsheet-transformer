@@ -9,6 +9,38 @@
 <body>
   <div class="container">
     <h1>Spreadsheet Transformer</h1>
+
+    <div class="button-row">
+      <button onclick="toggleInstructions()">Instructions</button>
+      <button onclick="toggleFixDataRange()">Fix Data Range / Columns</button>
+      <button onclick="toggleTripletRange()">Triplet Data Range</button>
+    </div>
+
+    <div id="instructions" class="panel" style="display:none;">
+      <h3>Instructions</h3>
+      <ol>
+        <li>Click <strong>Upload</strong> to choose an Excel or CSV file.</li>
+        <li>Data must be structured in triplets: Brand, Sub Category, SKU (repeating every 3 columns).</li>
+        <li>Click <strong>Process</strong> to normalize the data.</li>
+        <li>Click <strong>Download Excel</strong> to export the result.</li>
+      </ol>
+    </div>
+
+    <div id="fixDataRange" class="panel" style="display:none;">
+      <h3>Fix Data Range / Columns</h3>
+      <p>This function will be available in a future update. It will allow selection of specific rows/columns.</p>
+    </div>
+
+    <div id="tripletRange" class="panel" style="display:none;">
+      <h3>Triplet Data Structure</h3>
+      <p>Your file should contain data like:</p>
+      <ul>
+        <li>Brand 1 | Sub Category 1 | SKU 1</li>
+        <li>Brand 2 | Sub Category 2 | SKU 2</li>
+        <li>... repeated every 3 columns ...</li>
+      </ul>
+    </div>
+
     <input type="file" id="upload" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" />
     <button id="processBtn" disabled>Process</button>
     <button id="downloadBtn" disabled>Download Excel</button>
@@ -18,5 +50,20 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="script.js"></script>
+  <script>
+    function toggleInstructions() {
+      togglePanel("instructions");
+    }
+    function toggleFixDataRange() {
+      togglePanel("fixDataRange");
+    }
+    function toggleTripletRange() {
+      togglePanel("tripletRange");
+    }
+    function togglePanel(id) {
+      const panel = document.getElementById(id);
+      panel.style.display = panel.style.display === "none" ? "block" : "none";
+    }
+  </script>
 </body>
 </html>
