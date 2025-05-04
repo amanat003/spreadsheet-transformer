@@ -43,12 +43,12 @@
 
     <!-- Range Selection -->
     <div>
-      <label for="fixedColumns">Fixed Data Range (e.g., 1, 2, 3):</label>
-      <input type="text" id="fixedColumns" placeholder="Enter fixed column indices" />
+      <label for="fixedColumns">Fixed Data Range (e.g., 1:9):</label>
+      <input type="text" id="fixedColumns" placeholder="Enter fixed column range" />
     </div>
     <div>
-      <label for="tripletColumns">Triplet Data Range (e.g., 4, 5, 6):</label>
-      <input type="text" id="tripletColumns" placeholder="Enter triplet column indices" />
+      <label for="tripletColumns">Triplet Data Range (e.g., 9:n):</label>
+      <input type="text" id="tripletColumns" placeholder="Enter triplet column range" />
     </div>
     
     <!-- Buttons -->
@@ -116,51 +116,59 @@
 
     // Apply Fixed Data Range (capturing user input)
     document.getElementById("fixedColumns").addEventListener("input", function() {
-      fixedColumns = document.getElementById("fixedColumns").value.split(',').map(col => parseInt(col.trim()) - 1); // Convert to 0-index
+      const range = document.getElementById("fixedColumns").value;
+      fixedColumns = parseRange(range);
     });
 
     // Apply Triplet Data Range (capturing user input)
     document.getElementById("tripletColumns").addEventListener("input", function() {
-      tripletColumns = document.getElementById("tripletColumns").value.split(',').map(col => parseInt(col.trim()) - 1); // Convert to 0-index
+      const range = document.getElementById("tripletColumns").value;
+      tripletColumns = parseRange(range);
     });
+
+    // Parse range input like "1:9" or "9:n" to column indices
+    function parseRange(range) {
+      const parts = range.split(':');
+      const start = parseInt(parts[0].trim()) - 1; // Convert to 0-index
+      const end = parts[1] === 'n' ? data[0].length : parseInt(parts[1].trim()) - 1;
+      return { start, end };
+    }
 
     // Process Data (mimicking your ARRAYFORMULA logic)
     function processData() {
       const processedData = [];
 
-      // Mimicking the FLATTEN and SPLIT behavior in the formula
-      for (let i = 0; i < data.length; i++) {
-        let row = data[i];
-        const modifiedRow = [];
-        
-        // Loop through columns based on the provided ranges (fixed and triplet)
-        for (let col = 0; col < row.length; col++) {
-          let value = row[col];
+      // Separate fixed and triplet data based on user-defined column ranges
+      const fixedData = data.map(row => row.slice(fixedColumns.start, fixedColumns.end + 1)); // Use fixedColumns range to slice data
+      const tripletData = data.map(row => row.slice(tripletColumns.start, tripletColumns.end + 1));
 
-          // Apply transformation based on triplet columns
-          if (tripletColumns.includes(col)) {
-            if (value.match(/Atta|Maida/)) {
-              value = 'Flour';
-            } else if (value === 'Semolina') {
-              value = 'Semolina';
-            } else if (value === 'Lentil') {
-              value = 'Lentil';
-            } else if (value === 'Mustard Oil') {
-              value = 'Mustard Oil';
-            } else if (value === 'Puffed Rice') {
-              value = 'Puffed Rice';
-            } else if (value.match(/Rice Chinigura|Rice Others/)) {
-              value = 'Rice';
-            } else if (value === 'Salt') {
-              value = 'Salt';
-            }
+      // Process fixed data (just copy it for now)
+      fixedData.forEach(row => {
+        processedData.push(row);
+      });
+
+      // Process triplet data (apply transformations as per original logic)
+      tripletData.forEach(row => {
+        const modifiedRow = row.map((value, index) => {
+          if (value.match(/Atta|Maida/)) {
+            return 'Flour';
+          } else if (value === 'Semolina') {
+            return 'Semolina';
+          } else if (value === 'Lentil') {
+            return 'Lentil';
+          } else if (value === 'Mustard Oil') {
+            return 'Mustard Oil';
+          } else if (value === 'Puffed Rice') {
+            return 'Puffed Rice';
+          } else if (value.match(/Rice Chinigura|Rice Others/)) {
+            return 'Rice';
+          } else if (value === 'Salt') {
+            return 'Salt';
           }
-
-          modifiedRow.push(value);
-        }
-
+          return value; // return original value if no match
+        });
         processedData.push(modifiedRow);
-      }
+      });
 
       // Update data with processed values
       data = processedData;
