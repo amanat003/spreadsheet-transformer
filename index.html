@@ -150,10 +150,8 @@
       // Process triplet data (apply transformations as per original logic)
       tripletData.forEach(row => {
         const modifiedRow = row.map((value, index) => {
-          if (value.match(/Atta|Maida/)) {
+          if (value.match(/Atta|Maida|Semolina/)) {
             return 'Flour';
-          } else if (value === 'Semolina') {
-            return 'Semolina';
           } else if (value === 'Lentil') {
             return 'Lentil';
           } else if (value === 'Mustard Oil') {
@@ -167,7 +165,10 @@
           }
           return value; // return original value if no match
         });
-        processedData.push(modifiedRow);
+
+        // Flatten and combine triplet data with fixed data
+        const combinedRow = fixedData[processedData.length - 1].concat(modifiedRow);
+        processedData.push(combinedRow);
       });
 
       // Update data with processed values
