@@ -125,13 +125,48 @@
       console.log("Triplet columns applied:", tripletColumns);
     }
 
-    // Process Data (dummy function for now)
+    // Process Data (mimicking your ARRAYFORMULA logic)
     function processData() {
-      console.log("Processing data with fixed columns:", fixedColumns);
-      console.log("Processing data with triplet columns:", tripletColumns);
-      
-      // You can implement logic here to process the data based on fixed and triplet columns.
-      // For example, fixing columns, transforming triplet data, etc.
+      // Execute the ARRAYFORMULA logic in JavaScript
+
+      const processedData = [];
+
+      // Mimicking the FLATTEN and SPLIT behavior in the formula
+      for (let i = 0; i < data.length; i++) {
+        let row = data[i];
+        const modifiedRow = [];
+        
+        // Loop through columns based on the provided ranges (fixed and triplet)
+        for (let col = 0; col < row.length; col++) {
+          let value = row[col];
+
+          // Apply transformation based on triplet columns
+          if (tripletColumns.includes(col)) {
+            if (value.match(/Atta|Maida/)) {
+              value = 'Flour';
+            } else if (value === 'Semolina') {
+              value = 'Semolina';
+            } else if (value === 'Lentil') {
+              value = 'Lentil';
+            } else if (value === 'Mustard Oil') {
+              value = 'Mustard Oil';
+            } else if (value === 'Puffed Rice') {
+              value = 'Puffed Rice';
+            } else if (value.match(/Rice Chinigura|Rice Others/)) {
+              value = 'Rice';
+            } else if (value === 'Salt') {
+              value = 'Salt';
+            }
+          }
+
+          modifiedRow.push(value);
+        }
+
+        processedData.push(modifiedRow);
+      }
+
+      // Update data with processed values
+      data = processedData;
 
       // Enable the download button after processing
       document.getElementById("downloadBtn").disabled = false;
