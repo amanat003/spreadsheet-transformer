@@ -142,14 +142,20 @@
       const fixedData = data.map(row => row.slice(fixedColumns.start, fixedColumns.end + 1)); // Use fixedColumns range to slice data
       const tripletData = data.map(row => row.slice(tripletColumns.start, tripletColumns.end + 1));
 
-      // Process fixed data (just copy it for now)
-      fixedData.forEach(row => {
-        processedData.push(row);
-      });
+      // Add headers for the processed data
+      const headers = [
+        'Interview Date', 'Enroll', 'District', 'SBU Name', 'Bazar Name',
+        'Shop Name', 'Mobile Number', 'Landmark', 'Thana', 'Brand', 'Category',
+        'Sub Category', 'SKU'
+      ];
+      processedData.push(headers);
 
-      // Process triplet data (apply transformations as per original logic)
-      tripletData.forEach(row => {
-        const modifiedRow = row.map((value, index) => {
+      // Process fixed data (just copy it for now)
+      fixedData.forEach((row, rowIndex) => {
+        const combinedRow = [...row]; // Start with fixed data
+
+        // Process triplet data (apply transformations as per original logic)
+        const tripletRow = tripletData[rowIndex].map((value, index) => {
           if (value.match(/Atta|Maida|Semolina/)) {
             return 'Flour';
           } else if (value === 'Lentil') {
@@ -166,8 +172,10 @@
           return value; // return original value if no match
         });
 
-        // Flatten and combine triplet data with fixed data
-        const combinedRow = fixedData[processedData.length - 1].concat(modifiedRow);
+        // Add processed triplet data to the fixed data row
+        combinedRow.push(...tripletRow);
+        
+        // Push combined row into the result array
         processedData.push(combinedRow);
       });
 
