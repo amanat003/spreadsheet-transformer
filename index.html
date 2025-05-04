@@ -1,51 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spreadsheet Processor</title>
+  <style>
+    .container {
+      width: 80%;
+      margin: auto;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+    input {
+      margin: 5px;
+    }
+    button {
+      margin: 5px;
+    }
+  </style>
+</head>
 <body>
+
   <div class="container">
-    <h1>Spreadsheet Transformer</h1>
-
-    <div class="button-row">
-      <button onclick="toggleInstructions()">Instructions</button>
-      <button onclick="toggleFixedDataRange()">My Fixed Data Range / Columns</button>
-      <button onclick="toggleTripletDataRange()">Triplet Data Range</button>
-    </div>
-
-    <!-- Instructions Panel -->
-    <div id="instructions" style="display:none;">
-      <h3>Instructions</h3>
-      <ol>
-        <li>Click <strong>Upload</strong> to choose an Excel or CSV file.</li>
-        <li>After uploading, preview the data in the table below.</li>
-        <li>Click <strong>My Fixed Data Range / Columns</strong> to specify columns that should remain unchanged.</li>
-        <li>Click <strong>Triplet Data Range</strong> to specify columns containing Brand, Sub Category, and SKU.</li>
-        <li>Click <strong>Process</strong> to process the data according to your specifications.</li>
-        <li>Click <strong>Download Excel</strong> to export the result as an Excel file.</li>
-      </ol>
-    </div>
-
-    <!-- File Upload -->
+    <h1>Spreadsheet Processor</h1>
+    
+    <!-- Upload Button -->
     <input type="file" id="upload" accept=".csv, .xlsx, .xls" />
-    <button id="processBtn" disabled onclick="processData()">Process</button>
-    <button id="downloadBtn" disabled onclick="downloadExcel()">Download Excel</button>
-    <p id="status"></p>
-
-    <!-- Data Preview Table -->
+    
+    <!-- Preview Table -->
     <h3>Data Preview</h3>
     <table id="preview"></table>
 
-    <!-- Fixed Data Range Panel -->
-    <div id="fixedDataRange" style="display:none;">
-      <h3>My Fixed Data Range / Columns</h3>
-      <p>After previewing, enter the columns that should remain fixed (e.g., A, B, C):</p>
-      <input type="text" id="fixedColumns" placeholder="Enter fixed columns" />
-      <button onclick="applyFixedColumns()">Apply</button>
+    <!-- Range Selection -->
+    <div>
+      <label for="fixedColumns">Fixed Data Range (e.g., 1, 2, 3):</label>
+      <input type="text" id="fixedColumns" placeholder="Enter fixed column indices" />
     </div>
+    <div>
+      <label for="tripletColumns">Triplet Data Range (e.g., 4, 5, 6):</label>
+      <input type="text" id="tripletColumns" placeholder="Enter triplet column indices" />
+    </div>
+    
+    <!-- Buttons -->
+    <button id="processBtn" disabled onclick="processData()">Process</button>
+    <button id="downloadBtn" disabled onclick="downloadExcel()">Download Excel</button>
 
-    <!-- Triplet Data Range Panel -->
-    <div id="tripletDataRange" style="display:none;">
-      <h3>Triplet Data Range</h3>
-      <p>After previewing, enter the columns that contain Brand, Sub Category, and SKU (e.g., D:F, G:I):</p>
-      <input type="text" id="tripletColumns" placeholder="Enter triplet columns" />
-      <button onclick="applyTripletColumns()">Apply</button>
-    </div>
+    <!-- Status Message -->
+    <p id="status"></p>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -53,24 +64,6 @@
     let data; // Store uploaded data
     let fixedColumns = [];
     let tripletColumns = [];
-
-    // Toggle Instructions Panel
-    function toggleInstructions() {
-      const instr = document.getElementById("instructions");
-      instr.style.display = instr.style.display === "none" ? "block" : "none";
-    }
-
-    // Toggle Fixed Data Range Panel
-    function toggleFixedDataRange() {
-      const fixedRange = document.getElementById("fixedDataRange");
-      fixedRange.style.display = fixedRange.style.display === "none" ? "block" : "none";
-    }
-
-    // Toggle Triplet Data Range Panel
-    function toggleTripletDataRange() {
-      const tripletRange = document.getElementById("tripletDataRange");
-      tripletRange.style.display = tripletRange.style.display === "none" ? "block" : "none";
-    }
 
     // Handle file upload
     document.getElementById("upload").addEventListener("change", handleFileUpload);
@@ -99,8 +92,9 @@
     function previewData() {
       const table = document.getElementById("preview");
       table.innerHTML = ""; // Clear previous preview
-      
-      data.forEach((row, i) => {
+
+      // Create table rows and cells
+      data.forEach(row => {
         const tr = document.createElement("tr");
         row.forEach(cell => {
           const td = document.createElement("td");
@@ -112,23 +106,17 @@
     }
 
     // Apply Fixed Data Range (capturing user input)
-    function applyFixedColumns() {
-      const input = document.getElementById("fixedColumns").value;
-      fixedColumns = input.split(',').map(col => col.trim());
-      console.log("Fixed columns applied:", fixedColumns);
-    }
+    document.getElementById("fixedColumns").addEventListener("input", function() {
+      fixedColumns = document.getElementById("fixedColumns").value.split(',').map(col => parseInt(col.trim()) - 1); // Convert to 0-index
+    });
 
     // Apply Triplet Data Range (capturing user input)
-    function applyTripletColumns() {
-      const input = document.getElementById("tripletColumns").value;
-      tripletColumns = input.split(',').map(col => col.trim());
-      console.log("Triplet columns applied:", tripletColumns);
-    }
+    document.getElementById("tripletColumns").addEventListener("input", function() {
+      tripletColumns = document.getElementById("tripletColumns").value.split(',').map(col => parseInt(col.trim()) - 1); // Convert to 0-index
+    });
 
     // Process Data (mimicking your ARRAYFORMULA logic)
     function processData() {
-      // Execute the ARRAYFORMULA logic in JavaScript
-
       const processedData = [];
 
       // Mimicking the FLATTEN and SPLIT behavior in the formula
@@ -180,4 +168,6 @@
       XLSX.writeFile(wb, "processed_data.xlsx");
     }
   </script>
+
 </body>
+</html>
