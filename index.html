@@ -16,7 +16,6 @@
   <script type="text/babel">
     const App = () => {
       const [csvFile, setCsvFile] = React.useState(null);
-      const [previewData, setPreviewData] = React.useState([]);
       const [fixedRange, setFixedRange] = React.useState('1:9');
       const [tripletRange, setTripletRange] = React.useState('10:n');
       const [processedData, setProcessedData] = React.useState(null);
@@ -26,33 +25,11 @@
         const file = e.target.files[0];
         if (file && file.type === 'text/csv') {
           setCsvFile(file);
-          setPreviewData([]);
           setProcessedData(null);
           setError('');
         } else {
           setError('Please upload a valid CSV file.');
         }
-      };
-
-      const handlePreview = () => {
-        if (!csvFile) {
-          setError('Please upload a CSV file first.');
-          return;
-        }
-
-        Papa.parse(csvFile, {
-          complete: (result) => {
-            const data = result.data;
-            const headers = data[0];
-            const previewRows = data.slice(1, Math.min(4, data.length)).map(row => 
-              headers.reduce((obj, header, index) => ({ ...obj, [header]: row[index] }), {})
-            );
-            setPreviewData(previewRows);
-            setError('');
-          },
-          header: true,
-          skipEmptyLines: true
-        });
       };
 
       const processData = () => {
@@ -113,10 +90,130 @@
 
                 const newRow = [
                   ...fixedColumns,
-                  triplet[0], // Triplet first (e.g., J column)
+                  triplet[0], // Triplet first
                   category,   // Derived category
-                  triplet[1], // Triplet second (e.g., K column)
-                  triplet[2]  // Triplet third (e.g., L column)
+                  triplet[1], // Triplet second
+                  triplet[2]  // Triplet third
+                ].map(cell => cell || '');
+
+                processedRows.push(newRow);
+              }
+            });
+
+            const newHeaders = [
+              ...headers.slice(fixedStart - 1, fixedEnd),
+              'Triplet_First',
+              'Category',
+              'Triplet_Second',
+              'Triplet_Third'
+            ];
+
+            setProcessedData({ headers: newHeaders, rows: processedRows });
+            setError('');
+          },
+          header: false tubes, and the result is downloaded as an Excel file.
+
+The application is designed to be hosted on GitHub Pages, using CDN-hosted libraries for React, Tailwind CSS, PapaParse (for CSV parsing), and XLSX (for Excel generation). The artifact retains the same `artifact_id` as the previous version since this is an update to the existing application.
+
+<xaiArtifact artifact_id="d888903d-a575-4c58-bec7-53e10074dec7" artifact_version_id="1e0fa0fc-4724-4c8e-bb95-847c2a6176d0" title="index.html" contentType="text/html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSV Data Processor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.9/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const App = () => {
+      const [csvFile, setCsvFile] = React.useState(null);
+      const [fixedRange, setFixedRange] = React.useState('');
+      const [tripletRange, setTripletRange] = React.useState('');
+      const [processedData, setProcessedData] = React.useState(null);
+      const [error, setError] = React.useState('');
+
+      const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file && file.type === 'text/csv') {
+          setCsvFile(file);
+          setFixedRange('1:9'); // Set default after file upload
+          setTripletRange('10:n'); // Set default after file upload
+          setProcessedData(null);
+          setError('');
+        } else {
+          setError('Please upload a valid CSV file.');
+        }
+      };
+
+      const processData = () => {
+        if (!csvFile) {
+          setError('Please upload a CSV file first.');
+          return;
+        }
+
+        // Validate ranges
+        const fixedMatch = fixedRange.match(/^(\d+):(\d+)$/);
+        const tripletMatch = tripletRange.match(/^(\d+):(\d+|n)$/);
+        if (!fixedMatch || !tripletMatch) {
+          setError('Invalid range format. Use e.g., "1:9" for fixed and "10:n" for triplet.');
+          return;
+        }
+
+        const fixedStart = parseInt(fixedMatch[1]);
+        const fixedEnd = parseInt(fixedMatch[2]);
+        const tripletStart = parseInt(tripletMatch[1]);
+        const tripletEnd = tripletMatch[2] === 'n' ? Infinity : parseInt(tripletMatch[2]);
+
+        if (fixedStart < 1 || fixedEnd < fixedStart || tripletStart <= fixedEnd) {
+          setError('Invalid range values. Ensure fixed range precedes triplet range.');
+          return;
+        }
+
+        Papa.parse(csvFile, {
+          complete: (result) => {
+            const data = result.data;
+            const headers = data[0];
+            const rows = data.slice(1).filter(row => row.some(cell => cell));
+
+            const processedRows = [];
+            rows.forEach(row => {
+              const fixedColumns = row.slice(fixedStart - 1, fixedEnd);
+
+              // Process triplets (every three columns starting from tripletStart)
+              for (let i = tripletStart - 1; i < Math.min(row.length, tripletEnd); i += 3) {
+                if (i + 2 >= row.length) break;
+
+                const triplet = [row[i] || '', row[i + 1] || '', row[i + 2] || ''];
+                const item = triplet[1].toLowerCase();
+
+                let category = '';
+                if (/atta|maida|semolina/i.test(item)) {
+                  category = 'Flour';
+                } else if (item.includes('lentil')) {
+                  category = 'Lentil';
+                } else if (item.includes('mustard oil')) {
+                  category = 'Mustard Oil';
+                } else if (item.includes('puffed rice')) {
+                  category = 'Puffed Rice';
+                } else if (/rice chinigura|rice others/i.test(item)) {
+                  category = 'Rice';
+                } else if (item.includes('salt')) {
+                  category = 'Salt';
+                }
+
+                const newRow = [
+                  ...fixedColumns,
+                  triplet[0], // Triplet first
+                  category,   // Derived category
+                  triplet[1], // Triplet second
+                  triplet[2]  // Triplet third
                 ].map(cell => cell || '');
 
                 processedRows.push(newRow);
@@ -162,8 +259,8 @@
 
       return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-            <h1 className="text-2xl font-bold mb-4 text-center">CSV Data Processor</h1>
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+            <h1 className="text-2xl font-bold mb-6 text-center">CSV Data Processor</h1>
             
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -171,8 +268,8 @@
               </div>
             )}
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Upload CSV</label>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">1. Upload CSV</label>
               <input
                 type="file"
                 accept=".csv"
@@ -181,70 +278,41 @@
               />
             </div>
 
-            <div className="mb-4">
-              <button
-                onClick={handlePreview}
-                className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-              >
-                Preview
-              </button>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">2. Fixed Range (e.g., 1:9)</label>
+              <input
+                type="text"
+                value={fixedRange}
+                onChange={(e) => setFixedRange(e.target.value)}
+                disabled={!csvFile}
+                className={`w-full border rounded px-3 py-2 ${!csvFile ? 'bg-gray-200 cursor-not-allowed' : ''}`}
+                placeholder="1:9"
+              />
             </div>
 
-            {previewData.length > 0 && (
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold mb-2">Data Preview</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white border">
-                    <thead>
-                      <tr>
-                        {Object.keys(previewData[0]).map((key, index) => (
-                          <th key={key} className="border px-4 py-2">{`[${index + 1}] ${key}`}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewData.map((row, rowIndex) => (
-                        <tr key={rowIndex}>
-                          {Object.values(row).map((value, colIndex) => (
-                            <td key={colIndex} className="border px-4 py-2">{value}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Fixed Range (e.g., 1:9)</label>
-                <input
-                  type="text"
-                  value={fixedRange}
-                  onChange={(e) => setFixedRange(e.target.value)}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="1:9"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Triplet Range (e.g., 10:n)</label>
-                <input
-                  type="text"
-                  value={tripletRange}
-                  onChange={(e) => setTripletRange(e.target.value)}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="10:n"
-                />
-              </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">3. Triplet Range (e.g., 10:n)</label>
+              <input
+                type="text"
+                value={tripletRange}
+                onChange={(e) => setTripletRange(e.target.value)}
+                disabled={!csvFile || !fixedRange}
+                className={`w-full border rounded px-3 py-2 ${!csvFile || !fixedRange ? 'bg-gray-200 cursor-not-allowed' : ''}`}
+                placeholder="10:n"
+              />
             </div>
 
-            <div className="mb-4">
+            <div className="mb-6">
               <button
                 onClick={processData}
-                className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+                disabled={!csvFile || !fixedRange || !tripletRange}
+                className={`w-full py-2 px-4 rounded text-white ${
+                  !csvFile || !fixedRange || !tripletRange
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-500 hover:bg-green-600'
+                }`}
               >
-                Process
+                4. Process
               </button>
             </div>
 
@@ -254,7 +322,7 @@
                   onClick={handleDownload}
                   className="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600"
                 >
-                  Download Excel
+                  5. Download Excel
                 </button>
               </div>
             )}
