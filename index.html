@@ -47,7 +47,7 @@
       <input type="text" id="fixedColumns" placeholder="Enter fixed column range" />
     </div>
     <div>
-      <label for="tripletColumns">Triplet Data Range (e.g., 9:n):</label>
+      <label for="tripletColumns">Triplet Data Range (e.g., 10:n):</label>
       <input type="text" id="tripletColumns" placeholder="Enter triplet column range" />
     </div>
     
@@ -126,7 +126,7 @@
       tripletColumns = parseRange(range);
     });
 
-    // Parse range input like "1:9" or "9:n" to column indices
+    // Parse range input like "1:9" or "10:n" to column indices
     function parseRange(range) {
       const parts = range.split(':');
       const start = parseInt(parts[0].trim()) - 1; // Convert to 0-index
